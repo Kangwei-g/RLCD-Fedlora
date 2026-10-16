@@ -1,0 +1,49 @@
+experiment:
+  name: rlcd_fedlora_m5_k5
+  rounds: 200
+  seed: 0
+  num_clients: 5
+  clients_per_round: 5
+  use_mk_aggregation: true
+
+model:
+  family: roberta
+  total_layers: 12
+  lora_rank: 10
+  lora_alpha: 8
+  max_length: 512
+  train_classification_head: false
+
+local_training:
+  epochs: 1
+  batch_size: 64
+  learning_rate: 0.0005
+  factor_a_lr_scale: 1.0
+  lora_weight_decay: 0.0
+
+controller:
+  layer_selection_mode: max
+  factor_selection_mode: adaptive_score
+  factor_credit_mode: equal
+  warmup_rounds: 2
+  layer_random_probability: 0.20
+  layer_score_probability: 0.80
+  factor_random_probability: 0.20
+  factor_score_beta: 0.30
+  reward: validation_macro_f1_delta
+
+ddqn:
+  cold_start: true
+  state: [round, selected_factor_update_norm, validation_loss]
+  state_size: 3
+  action_size: 12
+  hidden_size: 64
+  learning_rate: 0.001
+  gamma: 0.99
+  epsilon_start: 1.0
+  epsilon_end: 0.01
+  epsilon_decay: 0.995
+  batch_size: 64
+  replay_buffer_size: 5000
+  target_tau: 0.05
+  checkpoint: null

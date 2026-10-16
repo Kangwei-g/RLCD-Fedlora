@@ -1,0 +1,8 @@
+RLCD-FedLoRA core-method release
+
+This distribution contains code derived from and reorganized from
+"Federated-Learning-for-NLP-Tasks", originally licensed under the MIT License
+and Copyright (c) 2024 Atul Kumar.
+
+The RLCD-FedLoRA additions implement adaptive layer-budget control, layer
+selection, per-layer LoRA factor selection, and selected-factor aggregation.

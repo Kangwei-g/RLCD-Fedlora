@@ -47,7 +47,8 @@ def parser(default_method=None):
     p.add_argument("--method", choices=METHODS, default=default_method, required=default_method is None)
     p.add_argument("--setting", choices=["5_5", "10_8"], default="5_5")
     p.add_argument("--seed", type=int, default=0)
-    p.add_argument("--rounds", type=int, default=200)
+    p.add_argument("--rounds", type=int, default=200,
+                   help="Communication rounds per run (default: 200)")
     p.add_argument("--epochs", type=int, default=1)
     p.add_argument("--batch-size", type=int, default=None, help="64 for LoRA; 32 for FedAvg-Full")
     p.add_argument("--eval-batch-size", type=int, default=64)

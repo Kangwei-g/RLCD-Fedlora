@@ -73,7 +73,8 @@ def parser():
     p.add_argument("--settings", choices=["5_5", "10_8"], nargs="+")
     p.add_argument("--methods", choices=sorted(METHODS), nargs="+")
     p.add_argument("--seeds", type=int, nargs="+")
-    p.add_argument("--rounds", type=int)
+    p.add_argument("--rounds", type=int,
+                   help="Communication rounds per run (default: 200 for both backbones)")
     p.add_argument("--device", default="cuda:0")
     p.add_argument("--workers", type=int, default=1, help="Concurrent clients per experiment")
     p.add_argument("--precision", choices=["fp32", "bf16"], default="bf16")

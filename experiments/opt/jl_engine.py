@@ -144,8 +144,8 @@ def get_args():
     parser.add_argument("--epochs", type=int, default=3, help="Number of local epochs to run. Default is 3.")
     parser.add_argument("--n_parties", type=int, default=10,
                         help="Number of workers in a distributed cluster. Default is 5.")
-    parser.add_argument("--comm_round", type=int, default=5,
-                        help="Maximum number of communication rounds. Default is 5.")
+    parser.add_argument("--comm_round", type=int, default=200,
+                        help="Communication rounds per run (default: 200).")
     parser.add_argument(
         "--early_stop_macro_f1",
         type=float,
@@ -3998,7 +3998,7 @@ if __name__ == "__main__":
     sparsity_B = {i: torch.tensor(0) for i in range(MODEL_LAYERS)}
     imprv_per_layer = None
     initial_num_layers = max(1, min(int(args.initial_num_layers), total_layers))
-    # Warm-up: first two rounds train all layers (matches B20A20 best run, t*=48).
+    # Train all layers during the first two warmup rounds.
     next_round_layer = list(range(total_layers))
     next_round_budget = len(next_round_layer)
     next_round_layer_reason = "warmup_all_layers"

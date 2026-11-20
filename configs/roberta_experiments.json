@@ -1,0 +1,7 @@
+{
+  "model_repo": "FacebookAI/roberta-base",
+  "settings": ["5_5", "10_8"],
+  "seeds": [0, 4, 5],
+  "rounds": 200,
+  "methods": ["d01", "flexlora_cd", "spdcfl_cd", "fedfmsl_cd", "rl_ffa_lora", "rl_fedavg_lora", "rl_rolora", "rl_flora", "rl_aslora", "fixed_g12", "random_g", "random_layers", "random_factors", "centralized", "local_only", "fedavg_full"]
+}

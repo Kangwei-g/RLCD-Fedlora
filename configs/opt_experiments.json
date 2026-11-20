@@ -1,0 +1,7 @@
+{
+  "model_repo": "facebook/opt-125m",
+  "settings": ["5_5"],
+  "seeds": [0, 4, 5],
+  "rounds": 100,
+  "methods": ["d01", "flexlora_cd", "rl_rolora", "rl_fedavg_lora"]
+}

@@ -225,7 +225,7 @@ def run_federated_round(
         total_examples=total_train_examples,
         use_mk_correction=use_mk_correction,
     )
-    aggregate = aggregate_payloads(payloads, weights)
+    aggregate = aggregate_payloads(payloads, weights, base_state=state_before)
     apply_factor_payload(global_model, aggregate)
     state_after = clone_lora_state(global_model)
     update_norm_q = selected_factor_delta_norm(

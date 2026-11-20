@@ -35,10 +35,17 @@ def fedavg_weights(
 
 
 def aggregate_payloads(
-    payloads: Sequence[TensorPayload], weights: Sequence[float]
+    payloads: Sequence[TensorPayload], weights: Sequence[float],
+    base_state: Optional[TensorPayload] = None,
 ) -> "OrderedDict[str, torch.Tensor]":
+    """Average values with normalized weights, or aggregate deltas from a base."""
     if len(payloads) != len(weights) or not payloads:
         raise ValueError("Payload and weight counts must match and be non-empty")
+    import math
+    if any(not math.isfinite(w) or w < 0 for w in weights):
+        raise ValueError("Weights must be finite and nonnegative")
+    if base_state is None and not math.isclose(sum(weights), 1.0, abs_tol=1e-6):
+        raise ValueError("Unnormalized weights require base_state for delta aggregation")
     reference_names = set(payloads[0].keys())
     for client_index, payload in enumerate(payloads):
         if set(payload.keys()) != reference_names:
@@ -49,11 +56,14 @@ def aggregate_payloads(
     aggregated = OrderedDict()
     for name in sorted(reference_names):
         reference = payloads[0][name]
-        value = torch.zeros_like(reference)
+        base = base_state[name].to(reference) if base_state is not None else torch.zeros_like(reference)
+        if base.shape != reference.shape:
+            raise ValueError("Base shape mismatch for {}".format(name))
+        value = base.clone()
         for payload, weight in zip(payloads, weights):
             tensor = payload[name].to(device=value.device, dtype=value.dtype)
             if tensor.shape != reference.shape:
                 raise ValueError("Payload shape mismatch for {}".format(name))
-            value.add_(tensor, alpha=float(weight))
+            value.add_(tensor - base, alpha=float(weight))
         aggregated[name] = value
     return aggregated

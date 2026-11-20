@@ -35,7 +35,7 @@ def test_delta_aggregation_applies_only_weighted_changes():
 
 def test_standard_seed_plans_and_baselines():
     run = module("run_experiments")
-    for backbone, count in (("roberta", 96), ("opt", 12)):
+    for backbone, count in (("roberta", 84), ("opt", 12)):
         args = run.parser().parse_args(["--backbone", backbone, "--data-file", "private_data/cache.pkl"])
         jobs = run.make_plan(args)
         assert len(jobs) == count

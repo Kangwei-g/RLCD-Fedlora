@@ -9,7 +9,7 @@ from types import SimpleNamespace
 import numpy as np
 import torch
 
-from cfvg import aggregate_uploaded_deltas
+from jl_aggregation import aggregate_uploaded_deltas
 from jl_baseline_hooks import aggregate_flora_lora
 from jl_protocol import (EvaluationProtocol, binary_metrics, confusion_metrics,
                          select_shared_threshold, summarize_predictions)

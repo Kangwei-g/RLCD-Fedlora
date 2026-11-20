@@ -26,9 +26,8 @@ Download model weights from the official pages:
 - [OPT-125M](https://huggingface.co/facebook/opt-125m): decoder backbone.
 
 Both integrations coordinate 12 blocks and apply LoRA to key and value
-projections. For LoRA methods, the pretrained backbone and seed-initialized
-classification head are frozen. FedAvg-Full is a separate control that trains
-all model parameters.
+projections. The pretrained backbone and seed-initialized classification
+head are frozen.
 
 The download helper records model revisions and checksums:
 
@@ -77,7 +76,6 @@ and model seeds; the partition seed is separate from the model seeds.
 
 Standard LoRA settings: rank 10, alpha 8, Adam learning rate 5e-4, batch size
 64, and one local epoch. FlexLoRA + CD adapts a common rank within 6..10.
-FedAvg-Full uses batch size 32 and learning rate 2e-5.
 
 | Method ID | Implementation |
 | --- | --- |
@@ -96,7 +94,6 @@ FedAvg-Full uses batch size 32 and learning rate 2e-5.
 | `random_factors` | Retain D01 G/layers; random A/B, shared across clients |
 | `local_only` | Independent all-layer LoRA training per client |
 | `centralized` | Pool training, validation, and test splits separately |
-| `fedavg_full` | Train and aggregate all model parameters |
 
 Baseline adaptations share the training and evaluation pipeline. Their rules
 are in `jl_rank.py`, `jl_layer_selection.py`, `jl_baseline_hooks.py`, and
@@ -112,10 +109,18 @@ python run_experiments.py --backbone roberta \
   --data-file private_data/prepared/roberta.pkl --dry-run
 ```
 
-Primary comparison, component ablations, and decoder comparison:
+The commands below reproduce the five experiments in the paper:
+
+| Experiment | Backbone | Settings | Methods |
+| --- | --- | --- | --- |
+| 1 | RoBERTa | `5_5` | RLCD-FedLoRA and eight baselines |
+| 2 | RoBERTa | `10_8` | Same methods as Experiment 1 |
+| 3 | RoBERTa | Both | RLCD-FedLoRA and four ablations |
+| 4 | RoBERTa | `5_5` | RLCD-FedLoRA, local-only, centralized |
+| 5 | OPT-125M | `5_5` | RLCD-FedLoRA, FlexLoRA + CD, RL + RoLoRA, RL + FedAvg-LoRA |
 
 ```bash
-python run_experiments.py --backbone roberta --settings 5_5 \
+python run_experiments.py --backbone roberta --settings 5_5 10_8 \
   --methods d01 flexlora_cd spdcfl_cd fedfmsl_cd rl_ffa_lora \
     rl_fedavg_lora rl_rolora rl_flora rl_aslora \
   --data-file private_data/prepared/roberta.pkl --output-root runs/primary
@@ -124,13 +129,17 @@ python run_experiments.py --backbone roberta --settings 5_5 10_8 \
   --methods d01 fixed_g12 random_g random_layers random_factors \
   --data-file private_data/prepared/roberta.pkl --output-root runs/ablations
 
+python run_experiments.py --backbone roberta --settings 5_5 \
+  --methods d01 local_only centralized \
+  --data-file private_data/prepared/roberta.pkl --output-root runs/paradigms
+
 python run_experiments.py --backbone opt \
   --data-file private_data/prepared/opt.pkl --output-root runs/decoder
 ```
 
-Use `--settings 10_8` for the supplementary comparison, or
-`--methods d01 local_only centralized` to compare training paradigms.
-The default RoBERTa plan includes all 16 methods under both settings.
+The default plans contain 84 RoBERTa runs and 12 OPT runs. Local-only and
+centralized training use the primary setting. RLCD-FedLoRA runs can be reused
+across tables by filtering the same plan with `summarize_results.py --methods`.
 
 Defaults are BF16 training, SDPA attention, disabled dropout, and `cuda:0`.
 Validation, feedback, and final testing use FP32. For CPU runs, add
@@ -165,10 +174,6 @@ final metrics, and predictions. Validation metrics and G are in
 ```bash
 python summarize_results.py runs/decoder/opt/experiment_plan.json \
   --output outputs/decoder_summary.csv
-
-python plot_trajectories.py \
-  runs/decoder/opt/5_5/ddqn_s01/seed0_standard/jl_round_metrics.csv \
-  --output outputs/decoder_trajectory.pdf
 ```
 
 The collector requires one completed run for every configured seed.

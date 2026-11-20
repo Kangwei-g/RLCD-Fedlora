@@ -10,10 +10,10 @@
 ## Contents
 
 - RoBERTa-base: RLCD-FedLoRA, eight hybrid baselines, four component
-  ablations, and local-only, centralized, and FedAvg-Full controls.
+  ablations, and local-only and centralized controls.
 - OPT-125M: RLCD-FedLoRA, FlexLoRA + CD, RL + RoLoRA, and RL + FedAvg-LoRA.
 - Cohort preparation, overlap auditing, model downloads, metric summaries,
-  trajectory plots, and synthetic tests.
+  and synthetic tests.
 
 See [README.md](README.md) for setup, method definitions, and commands.
 Patient data, generated outputs, and model weights are excluded.

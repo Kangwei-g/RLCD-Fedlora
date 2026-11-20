@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""JL single-seed experiment entry point. No legacy results are overwritten."""
+"""Single-seed entry point for the paper experiments."""
 
 from __future__ import annotations
 
@@ -12,51 +12,31 @@ import runpy
 import sys
 
 ROOT = Path(__file__).resolve().parent
-METHODS = {
-    "rlcd": dict(label="RLCD-FedLoRA", factor="adaptive_score", layers="rl"),
-    "flexlora_cd": dict(label="FlexLoRA + CD (G=12, validation-controlled common rank)", factor="adaptive_score", layers="all", rank_policy="server_validation_feedback"),
-    "spdcfl_cd": dict(label="SPD-CFL + CD (layer-budget proxy)", factor="adaptive_score", layers="spdcfl"),
-    "fedfmsl_cd": dict(label="FedFMSL + CD (SAL layer-selection proxy)", factor="adaptive_score", layers="fedfmsl"),
-    "rl_ffa_lora": dict(label="RL + FFA-LoRA", factor="fixed_baba", layers="rl", aggregation="ffa"),
-    "rl_fedavg_lora": dict(label="RL + FedAvg-LoRA", factor="fixed_baba", layers="rl", aggregation="fedavg"),
-    "rl_rolora": dict(label="RL + RoLoRA", factor="fixed_baba", layers="rl"),
-    "rl_flora": dict(label="RL + FLoRA (fixed-rank product-SVD controlled variant)", factor="fixed_baba", layers="rl", aggregation="flora"),
-    "rl_aslora": dict(label="RL + AS-LoRA", factor="arc_aslora", layers="rl"),
-    "centralized": dict(label="Centralized LoRA", factor="joint", layers="all", mode="centralized"),
-    "local_only": dict(label="Local-only LoRA", factor="joint", layers="all", mode="local_only"),
-    "fedavg_full": dict(label="FedAvg-Full", factor="fixed_baba", layers="none"),
-    "fixed_g12": dict(label="RLCD-FedLoRA ablation (fixed G=12, r=10)", factor="adaptive_score", layers="all"),
-    "random_g": dict(label="RLCD-FedLoRA ablation (uniform random G=1..12, r=10)",
-                     factor="adaptive_score", layers="random_g", count_policy="uniform_integer",
-                     count_warmup_rounds=2),
-}
-MAIN_METHODS = tuple(list(METHODS)[:9])
 from jl_controller_variants import VARIANTS
-for _name, _spec in VARIANTS.items():
-    METHODS[_name] = dict(label=_spec['label'], factor='adaptive_score', layers='rl',
-                          controller_variant=_name)
-
 from jl_opt_settings import METHOD_NAMES, MODEL_LAYERS, G_VALUES, MODEL_REPO, MODEL_REVISION
 
-METHODS = {name: METHODS[name] for name in METHOD_NAMES}
-METHODS['ddqn_s01']['label'] = 'RLCD-FedLoRA (D01, OPT-125M)'
-METHODS['flexlora_cd']['label'] = 'FlexLoRA + CD (fixed G=12, validation-controlled common rank 6..10)'
+METHODS = {
+    "ddqn_s01": dict(label="RLCD-FedLoRA", factor="adaptive_score", layers="rl"),
+    "flexlora_cd": dict(label="FlexLoRA + CD", factor="adaptive_score", layers="all", rank_policy="server_validation_feedback"),
+    "rl_rolora": dict(label="RL + RoLoRA", factor="fixed_baba", layers="rl"),
+    "rl_fedavg_lora": dict(label="RL + FedAvg-LoRA", factor="fixed_baba", layers="rl", aggregation="fedavg"),
+}
 MAIN_METHODS = METHOD_NAMES
 
 
 def parser(default_method=None):
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--method", choices=METHODS, default=default_method, required=default_method is None)
-    p.add_argument("--setting", choices=["5_5", "10_8"], default="5_5")
+    p.add_argument("--setting", choices=["5_5"], default="5_5")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--rounds", type=int, default=200,
                    help="Communication rounds per run (default: 200)")
     p.add_argument("--epochs", type=int, default=1)
-    p.add_argument("--batch-size", type=int, default=None, help="64 for LoRA; 32 for FedAvg-Full")
+    p.add_argument("--batch-size", type=int, default=None, help="Local batch size (default: 64)")
     p.add_argument("--eval-batch-size", type=int, default=64)
     p.add_argument("--micro-batch-size", type=int, default=64,
                    help="Split each logical training batch; retain one optimizer step per logical batch")
-    p.add_argument("--lr", type=float, default=None, help="5e-4 for LoRA; 2e-5 for FedAvg-Full")
+    p.add_argument("--lr", type=float, default=None, help="Local learning rate (default: 5e-4)")
     p.add_argument("--devices", default="cuda:0")
     p.add_argument("--workers", type=int, default=1,
                    help="Default serial clients for reproducible seed streams; >1 is explicitly exploratory")
@@ -95,21 +75,19 @@ def engine_arguments(args, output):
         "data": "mimic_icu10_tok512", "client_partition": "icu5_large" if m == 5 else "icu10",
         "n_parties": m, "sample_fraction": k / m,
         "comm_round": args.rounds, "epochs": args.epochs, "init_seed": args.seed,
-        "initial_rank": 10, "max_length": 512, "batch_size": args.batch_size if args.batch_size is not None else (32 if args.method == 'fedavg_full' else 64),
-        "lr": args.lr if args.lr is not None else (2e-5 if args.method == 'fedavg_full' else 5e-4), "lr_a_scale": 1, "lora_weight_decay": 0,
+        "initial_rank": 10, "max_length": 512, "batch_size": args.batch_size if args.batch_size is not None else 64,
+        "lr": args.lr if args.lr is not None else 5e-4, "lr_a_scale": 1, "lora_weight_decay": 0,
         "coordinate_schedule": "none" if spec.get("mode") else "baba",
         "factor_selection_mode": spec["factor"], "layer_select_method": spec["layers"],
         "layer_select_mode": "max", "factor_credit_mode": "equal", "factor_score_beta": 0.3,
         "factor_warmup_rounds": 0 if spec.get("mode") else 2, "factor_epsilon": 0.2,
         "layer_random_prob": 0.2, "layer_score_prob": 0.8,
-        "if_rl": args.method not in ("centralized", "local_only", "fedavg_full"),
-        "lora": args.method != "fedavg_full", "reset_memory": True,
+        "if_rl": args.method not in ("centralized", "local_only"),
+        "lora": True, "reset_memory": True,
         "gpu_devices": args.devices, "device": args.devices.split(",")[0],
         "max_workers": args.workers, "per_gpu_max_parallel": args.per_gpu_parallel,
         "logdir": str(output), "modeldir": str(output),
     }
-    if args.method == "fedavg_full":
-        values["finetune"] = "full"
     if args.method in VARIANTS:
         controller = VARIANTS[args.method]
         values.update(jl_controller_variant=args.method,
@@ -135,9 +113,9 @@ def engine_arguments(args, output):
 def main(default_method=None):
     args = parser(default_method).parse_args()
     if args.batch_size is None:
-        args.batch_size = 32 if args.method == 'fedavg_full' else 64
+        args.batch_size = 64
     if args.lr is None:
-        args.lr = 2e-5 if args.method == 'fedavg_full' else 5e-4
+        args.lr = 5e-4
     if min(args.rounds, args.epochs, args.batch_size, args.eval_batch_size, args.workers, args.per_gpu_parallel, args.micro_batch_size) < 1:
         raise SystemExit("Rounds, epochs, batches and concurrency must be positive")
     if args.validation_target is not None and not 0 <= args.validation_target <= 1:
@@ -177,7 +155,6 @@ def main(default_method=None):
         config['controller_implementation_revision'] = 'jl_controller_study_v1_20261108'
         config['controller_study'] = VARIANTS[args.method]
         config['client_shuffle'] = 'independent (seed, round, client) torch generators'
-        config['study_selection'] = 'exploratory; compare client validation, never select variants by test'
         if args.test_every_round or args.validation_target is not None:
             raise SystemExit('Controller study uses the full budget and final-only testing')
     if args.dry_run:
@@ -196,7 +173,6 @@ def main(default_method=None):
     os.environ["JL_MODEL_PATH"] = args.model_path
     os.environ["LORA_BASELINE_MODE"] = METHODS[args.method].get("aggregation", "")
     os.environ["LAYER_SELECT_METHOD"] = METHODS[args.method]["layers"]
-    os.environ.setdefault("MPLBACKEND", "Agg")
     from jl_protocol import write_json, sha256
     from jl_data import inspect_data
     config["data_sha256"] = sha256(args.data_file)

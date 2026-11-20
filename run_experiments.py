@@ -14,7 +14,7 @@ METHODS = {
     "rl_rolora": "rl_rolora", "rl_flora": "rl_flora", "rl_aslora": "rl_aslora",
     "fixed_g12": "fixed_g12", "random_g": "random_g",
     "random_layers": "d01_random_layers", "random_factors": "d01_random_factors",
-    "centralized": "centralized", "local_only": "local_only", "fedavg_full": "fedavg_full",
+    "centralized": "centralized", "local_only": "local_only",
 }
 OPT_METHODS = {"d01", "flexlora_cd", "rl_rolora", "rl_fedavg_lora"}
 
@@ -46,6 +46,8 @@ def make_plan(args):
     jobs = []
     for setting in settings:
         for method in methods:
+            if method in {"local_only", "centralized"} and setting != "5_5":
+                continue
             for seed in seeds:
                 internal = METHODS[method]
                 destination = output / setting / internal / ("seed%d_standard" % seed)
@@ -62,6 +64,8 @@ def make_plan(args):
                 jobs.append(dict(backbone=args.backbone, setting=setting, method=method,
                                  seed=seed, rounds=rounds, command=command,
                                  directory=str(destination), summary=str(destination / "jl_summary.json")))
+    if not jobs:
+        raise ValueError("Local-only and centralized comparisons use the primary setting 5_5")
     return jobs
 
 

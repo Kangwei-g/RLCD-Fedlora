@@ -180,7 +180,7 @@ def aggregate_fedavg_lora(
     rank: int = 10,
     lora_alpha: int = 8,
 ) -> Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
-    from cfvg import aggregate_uploaded_deltas
+    from jl_aggregation import aggregate_uploaded_deltas
     if global_model is None:
         raise ValueError('JL delta aggregation requires the shared global starting model')
     params, grads, _, _ = aggregate_uploaded_deltas(net_params, fed_avg_freqs, global_model.state_dict())

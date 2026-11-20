@@ -12,8 +12,7 @@ The model integration uses Transformers 4.46.3.
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements-experiments.txt
-pip install -e .
+pip install -r requirements.txt
 ```
 
 Run the commands below from the repository root.
@@ -41,7 +40,9 @@ Preflight checks verify its model manifest and tokenizer/cache identity.
 
 ## Data Preparation
 
-MIMIC-III data require authorized access and are not included.
+This repository contains source code only. MIMIC-III records, patient
+identifiers, data caches, predictions, and trained weights are not included.
+Obtain MIMIC-III data through your own authorized access.
 See [preprocessing/README.md](preprocessing/README.md) for cohort extraction,
 partitioning, overlap checks, and tokenization.
 
@@ -180,19 +181,6 @@ The collector requires one completed run for every configured seed.
 DV uses pooled confusion counts, loss per 10,000 cases, FN/FP ratio 7/3,
 and scenario coefficient 0.574. Its zero reference is the largest mean loss
 among the methods selected with `--methods`; the reference loss is exported.
-
-## Tests
-
-Tests use synthetic data and tiny random models; no MIMIC access, model
-download, or GPU is required:
-
-```bash
-python -m pytest -q
-python smoke_test.py --output-root /tmp/rlcd-smoke
-```
-
-CI also checks validation, rank changes, centralized pooling, controllers,
-factor masks, and model-specific preprocessing.
 
 ## License
 

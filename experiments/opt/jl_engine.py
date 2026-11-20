@@ -379,13 +379,7 @@ def compute_sparsity(grad, epsilon=1e-05):
     return sparsity
 COORDINATE_SCHEDULES = {'baba': [1, 0, 1, 0], 'none': []}
 COORDINATE_SCHEDULE_LABELS = {'baba': 'B,A,B,A', 'none': 'N/A (no LoRA CD)'}
-TREND_SLOPE_W = 5
-TREND_SLOPE_P = 2
-TREND_SLOPE_EPS = 0.001
-TREND_SLOPE_M_MIN = 5
-TREND_SLOPE_M_MAX = 20
-_coordinate_schedule_list = COORDINATE_SCHEDULES['bba']
-B10_WARMUP_TAIL_CYCLES = {'b10_bba': (10, [1, 1, 0]), 'b10_b2a2': (10, [1, 1, 0, 0]), 'b20_b10a10': (20, [1] * 10 + [0] * 10)}
+_coordinate_schedule_list = COORDINATE_SCHEDULES['baba']
 
 def resolve_coordinate_schedule(name):
     key = str(name).lower().strip()
@@ -402,7 +396,7 @@ def set_active_coordinate_schedule(name):
 def get_coordinate_factor(round_idx, schedule=None):
     """
     RLCD-FedLoRA coordinate schedule: 1 = update/aggregate B, 0 = A.
-    Cycles over the list set by --coordinate_schedule (default B,B,A).
+    Cycles over the list set by --coordinate_schedule (default B,A,B,A).
     """
     sched = schedule if schedule is not None else _coordinate_schedule_list
     return sched[round_idx % len(sched)]
@@ -503,7 +497,6 @@ def resolve_warmup_layer_selection(round_idx, warmup_rounds, total_layers):
 def resolve_all_layer_selection(total_layers):
     selected_layers = list(range(int(total_layers)))
     return {'selected_budget': len(selected_layers), 'selected_layers': selected_layers, 'layer_selection_reason': 'all_layers_baseline', 'layer_random_draw': None}
-FACTOR_SELECTOR_SEED_OFFSET = 7919
 ADAPTIVE_CD_LAYER_METHODS = frozenset({'rl', 'all', 'fedfmsl', 'spdcfl', 'random_g'})
 SCORE_HISTORY_FACTOR_MODES = frozenset({'adaptive_score'})
 
@@ -675,7 +668,6 @@ def select_layers_epsilon_greedy(layer_scores, num_layers, epsilon_layer, total_
 LORA_AGG_MODE = None
 prepare_rl_lora_round = None
 aggregate_lora_server = None
-LAYER_SELECT_METHOD = 'rl'
 layer_selector = None
 
 def _init_lora_baseline_hooks():

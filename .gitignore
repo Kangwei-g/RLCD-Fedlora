@@ -31,3 +31,20 @@ outputs/
 *.png
 *.zip
 *.tar*
+
+# Clinical data and generated records
+/data/**
+!/data/README.md
+**/mimic-iii*/
+**/MIMIC-III*/
+**/mimiciii*/
+**/MIMICIII*/
+*.h5
+*.hdf5
+*.hkl
+*.db
+*.sqlite*
+*.jsonl
+*.csv.gz
+*.tsv.gz
+*.pkl.gz
